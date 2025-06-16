@@ -5,6 +5,9 @@
 #include <linux/module.h>
 #include <linux/usb.h>
 #include <linux/mutex.h>
+#include <linux/printk.h>
+
+
 #include "main.h"
 #include "debug.h"
 #include "mac.h"
@@ -1296,18 +1299,22 @@ int rtw_usb_probe(struct usb_interface *intf, const struct usb_device_id *id)
 	int drv_data_size;
 	int ret;
 
+	
+	printk(KERN_INFO "rtw_usb_probe: start 1\n");
 	drv_data_size = sizeof(struct rtw_dev) + sizeof(struct rtw_usb);
 	hw = ieee80211_alloc_hw(drv_data_size, &rtw_ops);
-	if (!hw)
+	if (!hw) {
+		printk(KERN_INFO "No memory\n");
 		return -ENOMEM;
-
+	}
+	
 	rtwdev = hw->priv;
 	rtwdev->hw = hw;
 	rtwdev->dev = &intf->dev;
 	rtwdev->chip = (struct rtw_chip_info *)id->driver_info;
 	rtwdev->hci.ops = &rtw_usb_ops;
 	rtwdev->hci.type = RTW_HCI_TYPE_USB;
-
+	
 	rtwusb = rtw_get_usb_priv(rtwdev);
 	rtwusb->rtwdev = rtwdev;
 
@@ -1324,29 +1331,40 @@ int rtw_usb_probe(struct usb_interface *intf, const struct usb_device_id *id)
 		rtw_err(rtwdev, "failed to init USB interface\n");
 		goto err_deinit_core;
 	}
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_usb_intf_init: done\n");
 
 	ret = rtw_usb_init_tx(rtwdev);
 	if (ret) {
-		rtw_err(rtwdev, "failed to init USB TX\n");
+		rtw_dbg(rtwdev, RTW_DBG_USB, "failed to init USB TX\n");
 		goto err_destroy_usb;
 	}
 
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_usb_init_tx: done\n");
+
 	ret = rtw_usb_init_rx(rtwdev);
 	if (ret) {
-		rtw_err(rtwdev, "failed to init USB RX\n");
+		rtw_dbg(rtwdev, RTW_DBG_USB, "failed to init USB RX\n");
 		goto err_destroy_txwq;
 	}
 
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_usb_init_rx: done\n");
+
 	ret = rtw_chip_info_setup(rtwdev);
 	if (ret) {
-		rtw_err(rtwdev, "failed to setup chip information\n");
+		rtw_dbg(rtwdev, RTW_DBG_USB, "failed to setup chip information\n");
 		goto err_destroy_rxwq;
 	}
 
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_chip_info_setup: done\n");
+
 	rtw_usb_phy_cfg(rtwdev, USB_SPEED_HIGH);
+
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_usb_phy_cfg/USB_SPEED_HIGH: done\n");
 	rtw_usb_phy_cfg(rtwdev, USB_SPEED_SUPER);
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_usb_phy_cfg/USB_SPEED_SUPER: done\n");
 
 	ret = rtw_usb_switch_mode(rtwdev);
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_usb_switch_mode: done\n");
 	if (ret) {
 		/* Not a fail, but we do need to skip rtw_register_hw. */
 		rtw_dbg(rtwdev, RTW_DBG_USB, "switching to USB 3 mode\n");
@@ -1354,14 +1372,17 @@ int rtw_usb_probe(struct usb_interface *intf, const struct usb_device_id *id)
 		goto err_destroy_rxwq;
 	}
 
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_usb_probe: try rtw_register_hw\n");
+
 	ret = rtw_register_hw(rtwdev, rtwdev->hw);
 	if (ret) {
-		rtw_err(rtwdev, "failed to register hw\n");
+		rtw_dbg(rtwdev, RTW_DBG_USB, "failed to register hw\n");
 		goto err_destroy_rxwq;
 	}
 
 	rtw_usb_setup_rx(rtwdev);
 
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_usb_probe: OK\n");
 	return 0;
 
 err_destroy_rxwq:

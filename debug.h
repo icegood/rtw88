@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /* Copyright(c) 2018-2019  Realtek Corporation
  */
+#include <linux/printk.h>
 
 #ifndef __RTW_DEBUG_H
 #define __RTW_DEBUG_H
@@ -58,8 +59,10 @@ static inline bool rtw_dbg_is_enabled(struct rtw_dev *rtwdev,
 
 #else
 
-static inline void rtw_dbg(struct rtw_dev *rtwdev, enum rtw_debug_mask mask,
-			   const char *fmt, ...) {}
+//static inline void rtw_dbg(struct rtw_dev *rtwdev, enum rtw_debug_mask mask,
+//			   const char *fmt, ...) {}
+#define rtw_dbg(rtwdev, mask, a...) printk(KERN_INFO ##a)
+#define rtw_dbg(rtwdev, a...) printk(KERN_INFO ##a)
 
 static inline bool rtw_dbg_is_enabled(struct rtw_dev *rtwdev,
 				      enum rtw_debug_mask mask)

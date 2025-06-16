@@ -21,6 +21,9 @@
 #include "sdio.h"
 #include "led.h"
 
+#include <linux/printk.h>
+#include <linux/sched.h>
+
 bool rtw_disable_lps_deep_mode;
 EXPORT_SYMBOL(rtw_disable_lps_deep_mode);
 bool rtw_bf_support = true;
@@ -1527,6 +1530,8 @@ int rtw_power_on(struct rtw_dev *rtwdev)
 	rtw_coex_power_on_setting(rtwdev);
 	rtw_coex_init_hw_config(rtwdev, wifi_only);
 
+	rtw_info(rtwdev, "rtw_power_on done\n");
+
 	return 0;
 
 err_off:
@@ -1636,6 +1641,8 @@ void rtw_power_off(struct rtw_dev *rtwdev)
 	rtw_hci_stop(rtwdev);
 	rtw_coex_power_off_setting(rtwdev);
 	rtw_mac_power_off(rtwdev);
+
+	rtw_info(rtwdev, "rtw_power_off done\n");
 }
 EXPORT_SYMBOL(rtw_power_off);
 
@@ -1961,6 +1968,8 @@ static int rtw_load_firmware(struct rtw_dev *rtwdev, enum rtw_fw_type type)
 		return ret;
 	}
 
+	rtw_info(rtwdev, "rtw_load_firmware done: type %d\n", type);
+
 	return 0;
 }
 
@@ -2028,15 +2037,20 @@ static int rtw_chip_efuse_enable(struct rtw_dev *rtwdev)
 		goto err;
 	}
 
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_chip_efuse_enable: rtw_hci_setup done\n");
+
 	ret = rtw_mac_power_on(rtwdev);
 	if (ret) {
 		rtw_err(rtwdev, "failed to power on mac\n");
 		goto err;
 	}
 
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_chip_efuse_enable: rtw_mac_power_on done\n");
+
 	rtw_write8(rtwdev, REG_C2HEVT, C2H_HW_FEATURE_DUMP);
 
 	wait_for_completion(&fw->completion);
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_chip_efuse_enable: wait_for_completion done\n");
 	if (!fw->firmware) {
 		ret = -EINVAL;
 		rtw_err(rtwdev, "failed to load firmware\n");
@@ -2114,8 +2128,12 @@ static int rtw_chip_efuse_info_setup(struct rtw_dev *rtwdev)
 
 	mutex_lock(&rtwdev->mutex);
 
+	rtw_dbg(rtwdev, RTW_DBG_USB, "proceed under locked rtwdev->mutex\n");
+
 	/* power on mac to read efuse */
 	ret = rtw_chip_efuse_enable(rtwdev);
+
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_chip_efuse_enable done\n");
 	if (ret)
 		goto out_unlock;
 
@@ -2198,21 +2216,27 @@ int rtw_chip_info_setup(struct rtw_dev *rtwdev)
 
 	ret = rtw_chip_parameter_setup(rtwdev);
 	if (ret) {
-		rtw_err(rtwdev, "failed to setup chip parameters\n");
+		rtw_dbg(rtwdev, RTW_DBG_USB, "failed to setup chip parameters\n");
 		goto err_out;
 	}
+
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_chip_parameter_setup: done\n");
 
 	ret = rtw_chip_efuse_info_setup(rtwdev);
 	if (ret) {
-		rtw_err(rtwdev, "failed to setup chip efuse info\n");
+		rtw_dbg(rtwdev, RTW_DBG_USB, "failed to setup chip efuse info\n");
 		goto err_out;
 	}
 
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_chip_efuse_info_setup: done\n");
+
 	ret = rtw_chip_board_info_setup(rtwdev);
 	if (ret) {
-		rtw_err(rtwdev, "failed to setup chip board info\n");
+		rtw_dbg(rtwdev, RTW_DBG_USB, "failed to setup chip board info\n");
 		goto err_out;
 	}
+
+	rtw_dbg(rtwdev, RTW_DBG_USB, "rtw_chip_board_info_setup: done\n");
 
 	return 0;
 
@@ -2258,6 +2282,8 @@ int rtw_core_init(struct rtw_dev *rtwdev)
 		rtw_warn(rtwdev, "alloc_workqueue rtw_tx_wq failed\n");
 		return -ENOMEM;
 	}
+
+	printk(KERN_INFO "rtw_core_init: start\n");
 
 	INIT_DELAYED_WORK(&rtwdev->watch_dog_work, rtw_watch_dog_work);
 	INIT_DELAYED_WORK(&coex->bt_relink_work, rtw_coex_bt_relink_work);
@@ -2435,6 +2461,7 @@ int rtw_register_hw(struct rtw_dev *rtwdev, struct ieee80211_hw *hw)
 
 	rtw_led_init(rtwdev);
 
+	rtw_dbg(rtwdev, "failed to init regd\n");
 	ret = ieee80211_register_hw(hw);
 	if (ret) {
 		rtw_err(rtwdev, "failed to register hw\n");

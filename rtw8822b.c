@@ -720,6 +720,7 @@ static void rtw8822b_set_channel(struct rtw_dev *rtwdev, u8 channel, u8 bw,
 	struct rtw_efuse *efuse = &rtwdev->efuse;
 	const struct rtw8822b_rfe_info *rfe_info;
 
+	rtw_dbg(rtwdev, RTW_DBG_PHY, "rtw8822b_set_channel called");
 	if (WARN(efuse->rfe_option >= ARRAY_SIZE(rtw8822b_rfe_info),
 		 "rfe_option %d is out of boundary\n", efuse->rfe_option))
 		return;
@@ -808,14 +809,16 @@ static void rtw8822b_config_trx_mode(struct rtw_dev *rtwdev, u8 tx_path,
 		rtw_write32_mask(rtwdev, REG_MRC, BIT(23), 0x1);
 	}
 
-	for (counter = 100; counter > 0; counter--) {
+	for (counter = 5; counter > 0; counter--) {
 		u32 rf_reg33;
 
 		rtw_write_rf(rtwdev, RF_PATH_A, RF_LUTWE, RFREG_MASK, 0x80000);
 		rtw_write_rf(rtwdev, RF_PATH_A, RF_LUTWA, RFREG_MASK, 0x00001);
 
-		udelay(2);
+		udelay(20);
 		rf_reg33 = rtw_read_rf(rtwdev, RF_PATH_A, 0x33, RFREG_MASK);
+
+		rtw_warn(rtwdev, "LUT write attempt %d: rf_reg33=0x%x\n", counter, rf_reg33);
 
 		if (rf_reg33 == 0x00001)
 			break;

@@ -1365,9 +1365,9 @@ void rtw_dbg(struct rtw_dev *rtwdev, enum rtw_debug_mask mask,
 	va_start(args, fmt);
 	vaf.va = &args;
 
-	if (rtw_debug_mask & mask)
-		dev_printk(KERN_DEBUG, rtwdev->dev, "%pV", &vaf);
-
+	//if (rtw_debug_mask & mask)
+		//dev_printk(KERN_DEBUG, rtwdev->dev, "%pV", &vaf);
+	printk(KERN_INFO "%pV", &vaf);
 	va_end(args);
 }
 EXPORT_SYMBOL(rtw_dbg);
